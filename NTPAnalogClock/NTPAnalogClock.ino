@@ -36,7 +36,7 @@
 #  define ColorRED ILI9340_RED
 #endif
 
-const float degToRad = 0.0174532925;  // 1° == 0.0174532925rad 
+const float degToRad = 0.0174532925;  // 1° == 0.0174532925rad (PI/180) 
 
 const char ssid[] = "...";            // network SSID
 const char pass[] = "...";  // network password
@@ -173,9 +173,6 @@ void drawClockHands(time_t now, uint16_t radius, Point_t center) {
   uint8_t hh = hour(now);
   uint8_t mm = minute(now);
   uint8_t ss = second(now);
-
-  uint16_t startX = center.x + (int)((0.1 * radius * sin(radians)));
-  uint16_t startY = center.y - (int)((0.1 * radius * cos(radians)));
 
   auto centerLine = [&](Point_t p, uint16_t c = ColorPrimary) {
     tft.drawLine(center.x, center.y, p.x, p.y, c);
