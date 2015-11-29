@@ -10,6 +10,7 @@
 */
 
 #include <functional>
+#include <algorithm>
 
 #include <TimeLib.h> 
 #include <ESP8266WiFi.h>
@@ -144,11 +145,16 @@ void drawClockFace(uint16_t radius, Point_t center) {
   }
 }
 
+uint8_t lastH, lastM, lastS;
+
 void drawClockHands(time_t now, uint16_t radius, Point_t center) {
   float radians;
   uint8_t hh = hour(now);
   uint8_t mm = minute(now);
   uint8_t ss = second(now);
+
+  uint16_t startX = center.x + (int)((0.1 * radius * sin(radians)));
+  uint16_t startY = center.y - (int)((0.1 * radius * cos(radians)));
 
   auto centerLine = [&](Point_t p, uint16_t c = ColorPrimary) {
     tft.drawLine(center.x, center.y, p.x, p.y, c);
@@ -163,22 +169,35 @@ void drawClockHands(time_t now, uint16_t radius, Point_t center) {
   };
 
   // clear hands
-  tft.fillCircle(center.x, center.y, radius * 0.85, ColorBG);
+  //tft.fillCircle(center.x, center.y, radius * 0.85, ColorBG);
 
   // hour
-  radians = (hh % 12) * PI / 6.0 + (PI * mm / 360.0);
+  radians = (lastH % 12) * PI / 6.0 + (PI * lastM / 360.0);
   Point_t pH = makePoint(0.5);
+  centerLine(pH, ColorBG);
+  radians = (hh % 12) * PI / 6.0 + (PI * mm / 360.0);
+  pH = makePoint(0.5);
   centerLine(pH);
 
   // minute
-  radians = (mm * PI / 30.0) + (PI * ss / 1800.0);
+  radians = (lastM * PI / 30.0) + (PI * lastS / 1800.0);
   Point_t pM = makePoint(0.7);
+  centerLine(pM, ColorBG);
+  radians = (mm * PI / 30.0) + (PI * ss / 1800.0);
+  pM = makePoint(0.7);
   centerLine(pM);
 
   // second
-  radians = ss * PI / 30.0; 
+  radians = lastS * PI / 30.0; 
   Point_t pS = makePoint(0.8);
+  centerLine(pS, ColorBG);
+  radians = ss * PI / 30.0; 
+  pS = makePoint(0.8);
   centerLine(pS, ST7735_RED);
+
+  lastH = hh;
+  lastM = mm;
+  lastS = ss;
 
   // center dot
   tft.fillCircle(center.x, center.y, 3, ST7735_RED);
