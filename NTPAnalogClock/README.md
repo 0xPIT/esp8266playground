@@ -17,3 +17,12 @@ RESET   | +3V3
 CS      | D8
 GND     | GND
 VCC     | +3V3
+
+## Action Shot
+
+![ActionShot]
+
+
+
+
+[ActionShot]:https://raw.githubusercontent.com/0xPIT/esp8266playground/master/NTPAnalogClock/actionShot.jpg
