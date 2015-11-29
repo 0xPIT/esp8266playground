@@ -5,8 +5,10 @@
 
   Dependencies:
     * https://github.com/adafruit/Adafruit-GFX-Library.git
-    * https://github.com/nzmichaelh/Adafruit-ST7735-Library.git
     * https://github.com/PaulStoffregen/Time.git
+    * Depending on display:
+      * https://github.com/nzmichaelh/Adafruit-ST7735-Library.git
+      * https://github.com/0xPIT/Adafruit_ILI9340
 */
 
 #include <functional>
@@ -18,10 +20,21 @@
 
 #include <SPI.h>
 #include <Adafruit_GFX.h>
-#include <Adafruit_ST7735.h>
 
-#define ColorPrimary ST7735_BLACK
-#define ColorBG ST7735_WHITE
+//#define ST7735
+#define ILI9340
+
+#if defined(ST7735)
+#  include <Adafruit_ST7735.h>
+#  define ColorPrimary ST7735_BLACK
+#  define ColorBG ST7735_WHITE
+#  define ColorRED ST7735_RED
+#elif defined(ILI9340)
+#  include "Adafruit_ILI9340.h"
+#  define ColorPrimary ILI9340_BLACK
+#  define ColorBG ILI9340_WHITE
+#  define ColorRED ILI9340_RED
+#endif
 
 const float degToRad = 0.0174532925;  // 1° == 0.0174532925rad 
 
@@ -37,19 +50,27 @@ const unsigned int localPort = 8888;  // local port to listen for UDP packets
 const int NTP_PACKET_SIZE = 48;       // NTP time is in the first 48 bytes of message
 byte packetBuffer[NTP_PACKET_SIZE];   // buffer to hold incoming & outgoing packets
 
-#define TFT_CS     15
-#define TFT_DC     2
-Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS,  TFT_DC);
-
 typedef struct Point_s {
   int x;
   int y;
 } Point_t;
 
-Point_t displayCenter = { // 160x128 with rotation=3
-  ST7735_TFTHEIGHT_18 / 2,
-  ST7735_TFTWIDTH / 2
-};
+#define TFT_CS     15
+#define TFT_DC     2
+
+#if defined(ST7735)
+  Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS,  TFT_DC);
+  Point_t displayCenter = { // 160x128 with rotation=3
+    ST7735_TFTHEIGHT_18 / 2,
+    ST7735_TFTWIDTH / 2
+  };
+#elif defined(ILI9340)
+  Adafruit_ILI9340 tft = Adafruit_ILI9340(TFT_CS, TFT_DC, -1);
+  Point_t displayCenter = { // 160x128 with rotation=3
+    ILI9340_TFTHEIGHT / 2,
+    ILI9340_TFTWIDTH / 2
+  };
+#endif
 
 // radius of the clock face
 uint16_t clockRadius = std::min(displayCenter.x, displayCenter.y) - 2;
@@ -193,14 +214,14 @@ void drawClockHands(time_t now, uint16_t radius, Point_t center) {
   centerLine(pS, ColorBG);
   radians = ss * PI / 30.0; 
   pS = makePoint(0.8);
-  centerLine(pS, ST7735_RED);
+  centerLine(pS, ColorRED);
 
   lastH = hh;
   lastM = mm;
   lastS = ss;
 
   // center dot
-  tft.fillCircle(center.x, center.y, 3, ST7735_RED);
+  tft.fillCircle(center.x, center.y, 3, ColorRED);
 }
 
 void setup() 
@@ -208,7 +229,12 @@ void setup()
   Serial.begin(115200); 
   while (!Serial);
 
+#if defined(ST7735)
   tft.initR(INITR_BLACKTAB);
+#elif defined(ILI9340)
+  tft.begin();
+#endif
+
   drawClockFace(clockRadius, displayCenter);
 
   Serial.println("");
