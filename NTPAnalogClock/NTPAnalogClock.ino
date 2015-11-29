@@ -9,6 +9,8 @@
     * https://github.com/PaulStoffregen/Time.git
 */
 
+#include <functional>
+
 #include <TimeLib.h> 
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
@@ -16,7 +18,6 @@
 #include <SPI.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_ST7735.h>
-
 
 #define ColorPrimary ST7735_BLACK
 #define ColorBG ST7735_WHITE
@@ -27,7 +28,7 @@ const char ssid[] = "...";            // network SSID
 const char pass[] = "...";  // network password
 
 const int timeZone = 1;               // Central European Time
-const char* timerServerDNSName = "time.nist.gov";
+const char* timerServerDNSName = "0.europe.pool.ntp.org";
 IPAddress timeServer;
 
 WiFiUDP Udp;
@@ -40,8 +41,8 @@ byte packetBuffer[NTP_PACKET_SIZE];   // buffer to hold incoming & outgoing pack
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS,  TFT_DC);
 
 typedef struct Point_s {
-  uint16_t x;
-  uint16_t y;
+  int x;
+  int y;
 } Point_t;
 
 Point_t displayCenter = { // 160x128 with rotation=3
@@ -50,7 +51,7 @@ Point_t displayCenter = { // 160x128 with rotation=3
 };
 
 // radius of the clock face
-uint16_t clockRadius = ((displayCenter.x < displayCenter.y) ? displayCenter.x : displayCenter.y) - 2;
+uint16_t clockRadius = std::min(displayCenter.x, displayCenter.y) - 2;
 
 // send an NTP request to the time server at the given address
 void sendNTPpacket(IPAddress &address)
@@ -149,35 +150,37 @@ void drawClockHands(time_t now, uint16_t radius, Point_t center) {
   uint8_t mm = minute(now);
   uint8_t ss = second(now);
 
+  using namespace std::placeholders;
+  auto centerLine = std::bind(
+    &Adafruit_ST7735::drawLine, tft,
+    center.x, center.y, _1, _2, _3
+  );
+  
+  auto makePoint = [&](float factor) {
+    Point_t pt = {
+      x: center.x + (uint16_t)(factor * radius * sin(radians)),
+      y: center.y - (uint16_t)(factor * radius * cos(radians))
+    };
+    return std::move(pt);
+  };
+
   uint16_t color = ColorPrimary;
   tft.fillCircle(center.x, center.y, radius * 0.85, ColorBG);
 
   // hour
   radians = (hh % 12) * PI / 6.0 + (PI * mm / 360.0);
-  tft.drawLine(
-    center.x, center.y,
-    center.x + (int)(radius * 0.5 * sin(radians)),
-    center.y - (int)(radius * 0.5 * cos(radians)),
-    color 
-  );
+  Point_t pH = makePoint(0.5);
+  centerLine(pH.x, pH.y, color);
 
-  // hinute
+  // minute
   radians = (mm * PI / 30.0) + (PI * ss / 1800.0);
-  tft.drawLine(
-    center.x, center.y,
-    center.x + (int)(0.7 * radius * sin(radians)),
-    center.y - (int)(0.7 * radius * cos(radians)),
-    color
-  );
+  Point_t pM = makePoint(0.7);
+  centerLine(pM.x, pM.y, color);
 
   // second
-  radians = ss * PI / 30.0;    
-  tft.drawLine(
-    center.x, center.y,
-    center.x + (0.8 * radius * sin(radians)),
-    center.y - (0.8 * radius * cos(radians)),
-    ST7735_RED
-  );
+  radians = ss * PI / 30.0; 
+  Point_t pS = makePoint(0.8);
+  centerLine(pS.x, pS.y, ST7735_RED);
 
   // center dot
   tft.fillCircle(center.x, center.y, 3, ST7735_RED);
@@ -189,9 +192,9 @@ void setup()
   while (!Serial);
 
   tft.initR(INITR_BLACKTAB);
-  tft.fillScreen(ColorBG);
   drawClockFace(clockRadius, displayCenter);
 
+  Serial.println("");
   Serial.print("Connecting to ");
   Serial.println(ssid);
   WiFi.begin(ssid, pass);
