@@ -24,8 +24,8 @@
 
 const float degToRad = 0.0174532925;  // 1° == 0.0174532925rad 
 
-const char ssid[] = "...";            // network SSID
-const char pass[] = "...";  // network password
+const char ssid[] = "pit";            // network SSID
+const char pass[] = "1000101110000";  // network password
 
 const int timeZone = 1;               // Central European Time
 const char* timerServerDNSName = "0.europe.pool.ntp.org";
@@ -150,11 +150,9 @@ void drawClockHands(time_t now, uint16_t radius, Point_t center) {
   uint8_t mm = minute(now);
   uint8_t ss = second(now);
 
-  using namespace std::placeholders;
-  auto centerLine = std::bind(
-    &Adafruit_ST7735::drawLine, tft,
-    center.x, center.y, _1, _2, _3
-  );
+  auto centerLine = [&](Point_t p, uint16_t c = ColorPrimary) {
+    tft.drawLine(center.x, center.y, p.x, p.y, c);
+  };
   
   auto makePoint = [&](float factor) {
     Point_t pt = {
@@ -164,23 +162,23 @@ void drawClockHands(time_t now, uint16_t radius, Point_t center) {
     return std::move(pt);
   };
 
-  uint16_t color = ColorPrimary;
+  // clear hands
   tft.fillCircle(center.x, center.y, radius * 0.85, ColorBG);
 
   // hour
   radians = (hh % 12) * PI / 6.0 + (PI * mm / 360.0);
   Point_t pH = makePoint(0.5);
-  centerLine(pH.x, pH.y, color);
+  centerLine(pH);
 
   // minute
   radians = (mm * PI / 30.0) + (PI * ss / 1800.0);
   Point_t pM = makePoint(0.7);
-  centerLine(pM.x, pM.y, color);
+  centerLine(pM);
 
   // second
   radians = ss * PI / 30.0; 
   Point_t pS = makePoint(0.8);
-  centerLine(pS.x, pS.y, ST7735_RED);
+  centerLine(pS, ST7735_RED);
 
   // center dot
   tft.fillCircle(center.x, center.y, 3, ST7735_RED);
