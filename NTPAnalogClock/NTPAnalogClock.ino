@@ -24,8 +24,8 @@
 
 const float degToRad = 0.0174532925;  // 1° == 0.0174532925rad 
 
-const char ssid[] = "pit";            // network SSID
-const char pass[] = "1000101110000";  // network password
+const char ssid[] = "...";            // network SSID
+const char pass[] = "...";  // network password
 
 const int timeZone = 1;               // Central European Time
 const char* timerServerDNSName = "0.europe.pool.ntp.org";
